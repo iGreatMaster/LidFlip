@@ -2,8 +2,8 @@ Add-Type -AssemblyName System.Windows.Forms, System.Drawing
 
 # ---- single instance: a new launch tells the running copy to quit, then takes over ----
 # (so re-running after an update always loads the new version, and you never get two icons)
-$script:quitEvt = New-Object System.Threading.EventWaitHandle($false, [System.Threading.EventResetMode]::AutoReset, 'Local\LidToggle_Quit')
-$script:mutex   = New-Object System.Threading.Mutex($false, 'Local\LidToggle_Single')
+$script:quitEvt = New-Object System.Threading.EventWaitHandle($false, [System.Threading.EventResetMode]::AutoReset, 'Local\LidFlip_Quit')
+$script:mutex   = New-Object System.Threading.Mutex($false, 'Local\LidFlip_Single')
 function Acquire-Mutex([int]$ms) {
     try { $script:mutex.WaitOne($ms) }
     catch [System.Threading.AbandonedMutexException] { $true }   # previous copy was killed
@@ -13,11 +13,11 @@ if (-not (Acquire-Mutex 0)) {
     if (-not (Acquire-Mutex 8000)) { exit }                      # it didn't let go: leave it running
 }
 
-$script:LogFile = Join-Path $PSScriptRoot 'LidToggle.log'
+$script:LogFile = Join-Path $PSScriptRoot 'LidFlip.log'
 
 function Show-Error([string]$msg) {
     Add-Content -Path $script:LogFile -Value ("{0}  {1}" -f (Get-Date -Format s), $msg)
-    [System.Windows.Forms.MessageBox]::Show($msg, 'LidToggle - error') | Out-Null
+    [System.Windows.Forms.MessageBox]::Show($msg, 'LidFlip - error') | Out-Null
 }
 
 function Get-Lid {
@@ -236,8 +236,8 @@ function Update-Tray([switch]$Animate) {
     }
 }
 
-$script:startupLnk = Join-Path ([Environment]::GetFolderPath('Startup')) 'LidToggle.lnk'
-$script:vbsPath    = Join-Path $PSScriptRoot 'LidToggle.vbs'
+$script:startupLnk = Join-Path ([Environment]::GetFolderPath('Startup')) 'LidFlip.lnk'
+$script:vbsPath    = Join-Path $PSScriptRoot 'LidFlip.vbs'
 
 function Toggle-Startup {
     try {
@@ -270,7 +270,7 @@ function Get-Pinned {
 }
 
 # Remembered choice (survives restarts even if Windows re-creates the tray entry)
-$script:PrefKey = 'HKCU:\Software\LidToggle'
+$script:PrefKey = 'HKCU:\Software\LidFlip'
 
 function Get-PinPref {
     try { (Get-ItemProperty $script:PrefKey -Name Pinned -ErrorAction Stop).Pinned -eq 1 }

@@ -1,11 +1,17 @@
-# LidToggle
+# LidFlip
 
-A tiny Windows tray app that switches what happens when you **close your laptop lid**:
-**sleep** 🌙 or **stay awake** ⚡ — with one click, right next to the clock.
+**Keep your Windows laptop running with the lid closed — one click, right next to the clock.**
 
-![LidToggle animation](assets/preview.gif)
+LidFlip is a tiny tray app that flips what happens when you close your laptop lid:
+**sleep** 🌙 or **stay awake** ⚡.
 
-Handy for keeping downloads, builds, remote sessions or an external monitor running with the lid shut, then flipping back to normal sleep before the laptop goes in a bag.
+![LidFlip animation](assets/preview.gif)
+
+Use it to keep downloads, builds, renders, remote desktop sessions or an external monitor running with the lid shut ("clamshell mode"), then flip back to normal sleep before the laptop goes in a bag.
+
+## Why not just use Windows settings?
+
+You can — but the option is buried several screens deep in Control Panel, it has to be changed separately for battery and charger, and **some laptop makers hide it entirely**. LidFlip changes both in one click, shows the current state at a glance, and works even when the setting is hidden.
 
 ## Features
 
@@ -15,7 +21,7 @@ Handy for keeping downloads, builds, remote sessions or an external monitor runn
 - Remembers the pin choice across restarts
 - **Single instance**: launching it again replaces the running copy (never two icons)
 - No admin rights, no installer framework, no dependencies — plain PowerShell + WinForms
-- Errors are shown in a dialog and written to `LidToggle.log`
+- Errors are shown in a dialog and written to `LidFlip.log`
 
 ![Icons](assets/icons.png)
 
@@ -30,12 +36,12 @@ Handy for keeping downloads, builds, remote sessions or an external monitor runn
 1. Download the repo (**Code → Download ZIP**) and extract it.
 2. Double-click **`Install.cmd`**.
 
-This copies the app to `%LOCALAPPDATA%\LidToggle`, adds it to startup, and starts it.
+This copies the app to `%LOCALAPPDATA%\LidFlip`, adds it to startup, and starts it.
 If the icon is hidden under the `^` arrow, right-click it → **Pin next to clock**.
 
 ### Run without installing
 
-Double-click `src\LidToggle.vbs` (it starts the script with no console window).
+Double-click `src\LidFlip.vbs` (it starts the script with no console window).
 
 ## Usage
 
@@ -62,7 +68,7 @@ powershell -ExecutionPolicy Bypass -File uninstall.ps1 -KeepLidSetting
 
 - The lid action lives in the active power plan (`SUB_BUTTONS` / `LIDACTION`): `0` = do nothing, `1` = sleep. It is changed with `powercfg /setacvalueindex` and `/setdcvalueindex`.
 - Some laptop makers hide this setting, so plain `powercfg /q` shows nothing; the app reads it with `powercfg /qh`, which includes hidden settings.
-- *Pin next to clock* sets `IsPromoted = 1` for the app's entry under `HKCU\Control Panel\NotifyIconSettings` (Windows 11). The choice is saved in `HKCU\Software\LidToggle` and re-applied on launch.
+- *Pin next to clock* sets `IsPromoted = 1` for the app's entry under `HKCU\Control Panel\NotifyIconSettings` (Windows 11). The choice is saved in `HKCU\Software\LidFlip` and re-applied on launch.
 - Icons and animation frames are drawn at 256 px with GDI+ and downscaled to 32 px, generated once at startup.
 - A named mutex keeps one instance; a new launch signals the old one through a named event to quit, then takes over.
 
@@ -71,8 +77,8 @@ The setting applies to the **current power plan**. If you switch plans, toggle a
 ## Project layout
 
 ```
-src/LidToggle.ps1   the app
-src/LidToggle.vbs   silent launcher (no console window)
+src/LidFlip.ps1   the app
+src/LidFlip.vbs   silent launcher (no console window)
 install.ps1         per-user install + startup shortcut
 uninstall.ps1       removal + restore lid action to Sleep
 Install.cmd         double-click wrapper for install.ps1
