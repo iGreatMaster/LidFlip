@@ -9,48 +9,6 @@ using Microsoft.Win32;
 
 namespace LidFlip
 {
-    /// <summary>Light/dark colours, following the Windows app theme.</summary>
-    class Theme
-    {
-        public bool Dark;
-        public Color Bg, Card, Text, Sub, Border, Accent, AccentHover, MenuBg, MenuHi, Bar, BarText, Warn;
-
-        public static Theme Current()
-        {
-            bool dark = false;
-            try
-            {
-                using (RegistryKey k = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"))
-                {
-                    object v = k == null ? null : k.GetValue("AppsUseLightTheme");
-                    dark = v is int && (int)v == 0;
-                }
-            }
-            catch { }
-            return dark ? DarkTheme() : LightTheme();
-        }
-
-        static Color C(string h) { return ColorTranslator.FromHtml(h); }
-
-        public static Theme LightTheme()
-        {
-            Theme t = new Theme();
-            t.Dark = false; t.Bg = C("#FFFFFF"); t.Card = C("#F1F3F9"); t.Text = C("#111827"); t.Sub = C("#4B5563");
-            t.Border = C("#D1D5DB"); t.Accent = C("#4F46E5"); t.AccentHover = C("#4338CA");
-            t.MenuBg = C("#FFFFFF"); t.MenuHi = C("#E8EAF6"); t.Bar = C("#E9ECF2"); t.BarText = C("#1F2937"); t.Warn = C("#F59E0B");
-            return t;
-        }
-
-        public static Theme DarkTheme()
-        {
-            Theme t = new Theme();
-            t.Dark = true; t.Bg = C("#16181F"); t.Card = C("#20232D"); t.Text = C("#F3F4F6"); t.Sub = C("#A3A9B8");
-            t.Border = C("#3A3F4C"); t.Accent = C("#6366F1"); t.AccentHover = C("#818CF8");
-            t.MenuBg = C("#2B2E38"); t.MenuHi = C("#3B3F66"); t.Bar = C("#101217"); t.BarText = C("#E5E7EB"); t.Warn = C("#FBBF24");
-            return t;
-        }
-    }
-
     /// <summary>The illustrations for each guide page (also used for the README images).</summary>
     static class GuideArt
     {
@@ -67,12 +25,12 @@ namespace LidFlip
         public static readonly string[] Bodies = {
             "Choose what your laptop does when you close the lid: go to sleep, or keep running. LidFlip lives next to the clock, so it's always one click away.",
             "Click the LidFlip icon to switch. The moon means the laptop sleeps when you close the lid. The lightning bolt means it keeps running: downloads, builds and remote sessions carry on.",
-            "Right-click the icon for the menu. A check mark shows which options are on. \"Stay awake when lid is closed\" does the same as clicking the icon.",
+            "Right-click the icon for the menu. Each switch shows whether an option is on. \"Stay awake when lid is closed\" does the same as clicking the icon.",
             "Turn this on and LidFlip starts every time you sign in, so the icon is always there. Keep LidFlip.exe in a permanent folder first (not Downloads), because Windows remembers where it is.",
             "Windows hides new icons under the ^ arrow. \"Pin next to clock\" keeps LidFlip on the taskbar, and it stays there after restarts. You can also just drag the icon out of the arrow.",
             "With the lightning bolt on, a closed laptop keeps running and can get hot inside a bag. Flip back to the moon before you pack it away." };
 
-        static Font F(float pt, FontStyle st) { return new Font("Segoe UI", pt, st, GraphicsUnit.Point); }
+        static Font F(float pt, FontStyle st) { return st == FontStyle.Bold ? Fonts.Title(pt) : Fonts.Text(pt, st); }
 
         public static void Draw(Graphics g, int page, RectangleF r, Theme t, float s)
         {
@@ -80,8 +38,8 @@ namespace LidFlip
             {
                 case 0: Welcome(g, r, t, s); break;
                 case 1: ClickToFlip(g, r, t, s); break;
-                case 2: MenuMock(g, Center(r, 300 * s, 196 * s), t, s, -1, true); break;
-                case 3: MenuMock(g, Center(r, 300 * s, 196 * s), t, s, 1, true); break;
+                case 2: MenuPicture(g, r, t, s, -1); break;
+                case 3: MenuPicture(g, r, t, s, 1); break;
                 case 4: PinNextToClock(g, r, t, s); break;
                 case 5: BagWarning(g, r, t, s); break;
             }
@@ -218,49 +176,25 @@ namespace LidFlip
         }
 
         // ---- pages 2 & 3: the right-click menu ----
-        static void MenuMock(Graphics g, RectangleF r, Theme t, float s, int highlight, bool withChecks)
+        static void MenuPicture(Graphics g, RectangleF r, Theme t, float s, int highlight)
         {
-            string[] items = { "Stay awake when lid is closed", "Start with Windows", "Pin next to clock", "-", "How LidFlip works", "Exit" };
-            bool[] checks = { false, true, true, false, false, false };
-
-            for (int i = 6; i >= 1; i--)          // soft shadow
-                using (GraphicsPath sp = Art.RoundRect(new RectangleF(r.X - i * s, r.Y - i * s + 4 * s, r.Width + 2 * i * s, r.Height + 2 * i * s), (10 + i) * s))
-                using (SolidBrush sb = new SolidBrush(Color.FromArgb(t.Dark ? 18 : 9, 0, 0, 0)))
-                    g.FillPath(sb, sp);
-            using (GraphicsPath p = Art.RoundRect(r, 10 * s))
+            // the guide shows the real menu, rendered by the same code
+            using (Bitmap m = TrayMenu.RenderPicture(t, s, highlight, false, true, true))
             {
-                using (SolidBrush b = new SolidBrush(t.MenuBg)) g.FillPath(b, p);
-                using (Pen pen = new Pen(t.Border, 1)) g.DrawPath(pen, p);
-            }
-
-            float y = r.Y + 8 * s, rowH = 32 * s;
-            using (Font f = F(9.5f, FontStyle.Regular))
-            using (Font fb = F(9.5f, FontStyle.Bold))
-                for (int i = 0; i < items.Length; i++)
+                float w = m.Width, h = m.Height, k = Math.Min(1f, (r.Height - 24 * s) / h);
+                RectangleF dst = Center(r, w * k, h * k);
+                for (int i = 6; i >= 1; i--)          // soft shadow
+                    using (GraphicsPath sp = Art.RoundRect(new RectangleF(dst.X - i * s, dst.Y - i * s + 4 * s, dst.Width + 2 * i * s, dst.Height + 2 * i * s), (8 + i) * s))
+                    using (SolidBrush sb = new SolidBrush(Color.FromArgb(t.Dark ? 18 : 8, 0, 0, 0)))
+                        g.FillPath(sb, sp);
+                using (GraphicsPath clip = Art.RoundRect(dst, 8 * s))
                 {
-                    if (items[i] == "-")
-                    {
-                        using (Pen sp = new Pen(t.Border, 1)) g.DrawLine(sp, r.X + 12 * s, y + 5 * s, r.Right - 12 * s, y + 5 * s);
-                        y += 10 * s;
-                        continue;
-                    }
-                    RectangleF row = new RectangleF(r.X + 6 * s, y, r.Width - 12 * s, rowH - 2 * s);
-                    if (i == highlight)
-                        using (GraphicsPath hp = Art.RoundRect(row, 6 * s))
-                        using (SolidBrush hb = new SolidBrush(t.MenuHi))
-                            g.FillPath(hb, hp);
-                    if (withChecks && checks[i])
-                        using (Pen cp = new Pen(i == highlight ? t.Accent : t.Text, 2 * s))
-                        {
-                            cp.StartCap = LineCap.Round; cp.EndCap = LineCap.Round; cp.LineJoin = LineJoin.Round;
-                            float cx = row.X + 12 * s, cy = row.Y + row.Height / 2;
-                            g.DrawLines(cp, new PointF[] { new PointF(cx, cy), new PointF(cx + 4 * s, cy + 4 * s), new PointF(cx + 11 * s, cy - 5 * s) });
-                        }
-                    TextRenderer.DrawText(g, items[i], i == highlight ? fb : f,
-                        new Rectangle((int)(row.X + 34 * s), (int)row.Y, (int)(row.Width - 40 * s), (int)row.Height),
-                        t.Text, TextFormatFlags.VerticalCenter | TextFormatFlags.Left);
-                    y += rowH;
+                    Region old = g.Clip;
+                    g.SetClip(clip, CombineMode.Intersect);
+                    g.DrawImage(m, dst);
+                    g.Clip = old;
                 }
+            }
         }
 
         // ---- page 4: from the ^ overflow to the taskbar ----
@@ -274,7 +208,7 @@ namespace LidFlip
             Taskbar(g, left, t, s, -1, true);
             float chevX = left.Right - 14 * s - 74 * s - 16 * s - 34 * s - 30 * s - 9 * s;
             RectangleF fly = new RectangleF(chevX - 34 * s, left.Y - 70 * s, 68 * s, 56 * s);
-            using (GraphicsPath fp = Art.RoundRect(fly, 10 * s))
+            using (GraphicsPath fp = Art.RoundRect(fly, 8 * s))
             {
                 using (SolidBrush fb = new SolidBrush(t.MenuBg)) g.FillPath(fb, fp);
                 using (Pen pen = new Pen(t.Border, 1)) g.DrawPath(pen, fp);
@@ -364,8 +298,8 @@ namespace LidFlip
         }
 
         RectangleF IllusRect { get { return new RectangleF(32 * s, 28 * s, 496 * s, 250 * s); } }
-        Rectangle BackRect { get { return new Rectangle((int)(32 * s), (int)(488 * s), (int)(110 * s), (int)(42 * s)); } }
-        Rectangle NextRect { get { return new Rectangle((int)(418 * s), (int)(488 * s), (int)(110 * s), (int)(42 * s)); } }
+        Rectangle BackRect { get { return new Rectangle((int)(32 * s), (int)(492 * s), (int)(110 * s), (int)(34 * s)); } }
+        Rectangle NextRect { get { return new Rectangle((int)(418 * s), (int)(492 * s), (int)(110 * s), (int)(34 * s)); } }
         RectangleF DotRect(int i)
         {
             float total = (GuideArt.Pages - 1) * 16 * s + 22 * s;
@@ -413,9 +347,11 @@ namespace LidFlip
 
             // illustration card
             RectangleF ir = new RectangleF(32 * s, 28 * s, 496 * s, 250 * s);
-            using (GraphicsPath cp = Art.RoundRect(ir, 18 * s))
-            using (SolidBrush cb = new SolidBrush(t.Card))
-                g.FillPath(cb, cp);
+            using (GraphicsPath cp = Art.RoundRect(ir, 8 * s))
+            {
+                using (SolidBrush cb = new SolidBrush(t.Card)) g.FillPath(cb, cp);
+                using (Pen cpen = new Pen(t.CardBorder, 1)) g.DrawPath(cpen, cp);
+            }
             if (illus != null)
             {
                 double e = Art.EaseOut(animT);
@@ -426,7 +362,7 @@ namespace LidFlip
                     cm.Matrix33 = (float)e;
                     ia.SetColorMatrix(cm);
                     Region old = g.Clip;
-                    using (GraphicsPath cp = Art.RoundRect(ir, 18 * s)) g.SetClip(cp);
+                    using (GraphicsPath cp = Art.RoundRect(ir, 8 * s)) g.SetClip(cp);
                     g.DrawImage(illus, new Rectangle((int)(ir.X + off), (int)ir.Y, illus.Width, illus.Height),
                         0, 0, illus.Width, illus.Height, GraphicsUnit.Pixel, ia);
                     g.Clip = old;
@@ -434,12 +370,12 @@ namespace LidFlip
             }
 
             // step, title and text
-            using (Font fs = new Font("Segoe UI", 9f, FontStyle.Bold))
+            using (Font fs = Fonts.Text(9f))
                 TextRenderer.DrawText(g, string.Format("STEP {0} OF {1}", page + 1, GuideArt.Pages), fs,
-                    new Point((int)(32 * s), (int)(298 * s)), t.Accent);
-            using (Font ft = new Font("Segoe UI Semibold", 17f))
+                    new Point((int)(32 * s), (int)(298 * s)), t.Sub);
+            using (Font ft = Fonts.Title(15f))
                 TextRenderer.DrawText(g, GuideArt.Titles[page], ft, new Point((int)(30 * s), (int)(318 * s)), t.Text);
-            using (Font fb = new Font("Segoe UI", 10.5f))
+            using (Font fb = Fonts.Text(10.5f))
                 TextRenderer.DrawText(g, GuideArt.Bodies[page], fb,
                     new Rectangle((int)(32 * s), (int)(362 * s), (int)(496 * s), (int)(116 * s)), t.Sub,
                     TextFormatFlags.WordBreak | TextFormatFlags.Left | TextFormatFlags.Top);
@@ -451,28 +387,28 @@ namespace LidFlip
                 float x = (W * s - total) / 2 + i * 16 * s + (i > page ? 14 * s : 0);
                 RectangleF d = new RectangleF(x, 505 * s, i == page ? 22 * s : 8 * s, 8 * s);
                 using (GraphicsPath dp = Art.RoundRect(d, 4 * s))
-                using (SolidBrush db = new SolidBrush(i == page ? t.Accent : (hover == 10 + i ? t.Sub : t.Border)))
+                using (SolidBrush db = new SolidBrush(i == page ? t.Accent : (hover == 10 + i ? t.Sub : t.Stroke)))
                     g.FillPath(db, dp);
             }
 
             // buttons
-            using (Font bf = new Font("Segoe UI Semibold", 10f))
+            using (Font bf = Fonts.Text(10f))
             {
                 if (page > 0)
                 {
-                    Rectangle br = new Rectangle((int)(32 * s), (int)(488 * s), (int)(110 * s), (int)(42 * s));
-                    using (GraphicsPath bp = Art.RoundRect(br, 10 * s))
+                    Rectangle br = new Rectangle((int)(32 * s), (int)(492 * s), (int)(110 * s), (int)(34 * s));
+                    using (GraphicsPath bp = Art.RoundRect(br, 4 * s))
                     {
-                        if (hover == 0) using (SolidBrush hb = new SolidBrush(t.Card)) g.FillPath(hb, bp);
-                        using (Pen pen = new Pen(t.Border, 1.2f * s)) g.DrawPath(pen, bp);
+                        using (SolidBrush hb = new SolidBrush(hover == 0 ? t.ButtonHover : t.Button)) g.FillPath(hb, bp);
+                        using (Pen pen = new Pen(t.Dark ? Color.FromArgb(48, 255, 255, 255) : Color.FromArgb(40, 0, 0, 0), 1)) g.DrawPath(pen, bp);
                     }
                     TextRenderer.DrawText(g, "Back", bf, br, t.Text, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
                 }
-                Rectangle nr = new Rectangle((int)(418 * s), (int)(488 * s), (int)(110 * s), (int)(42 * s));
-                using (GraphicsPath np = Art.RoundRect(nr, 10 * s))
+                Rectangle nr = new Rectangle((int)(418 * s), (int)(492 * s), (int)(110 * s), (int)(34 * s));
+                using (GraphicsPath np = Art.RoundRect(nr, 4 * s))
                 using (SolidBrush nb = new SolidBrush(hover == 1 ? t.AccentHover : t.Accent))
                     g.FillPath(nb, np);
-                TextRenderer.DrawText(g, page == GuideArt.Pages - 1 ? "Get started" : "Next", bf, nr, Color.White,
+                TextRenderer.DrawText(g, page == GuideArt.Pages - 1 ? "Get started" : "Next", bf, nr, t.OnAccent,
                     TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
             }
         }

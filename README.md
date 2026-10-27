@@ -17,6 +17,12 @@ One small file (~80 KB). No installer, no admin rights, nothing else to install 
 
 You can — but the option is buried several screens deep, it has to be changed separately for battery and charger, and **some laptop makers hide it entirely**. LidFlip changes both in one click, shows the current state at a glance, and works even when the setting is hidden.
 
+## Looks like part of Windows 11
+
+LidFlip follows your Windows settings: light or dark mode, your **accent colour**, and the Windows 11 fonts and icons (Segoe UI Variable and Segoe Fluent Icons). On Windows 10 it falls back to the Windows 10 equivalents.
+
+<p align="center"><img src="assets/guide/menu-light.png" width="300" alt="LidFlip menu, light"> <img src="assets/guide/menu-dark.png" width="300" alt="LidFlip menu, dark"></p>
+
 ## How it works
 
 The first time you run LidFlip, a short guide walks you through it. You can open it again any time from the menu (**How LidFlip works**).
@@ -42,7 +48,7 @@ Click the LidFlip icon next to the clock to switch. The icon animates — the li
 
 | Option | What it does |
 |---|---|
-| **Stay awake when lid is closed** | Same as clicking the icon. The check mark shows the current state. |
+| **Stay awake when lid is closed** | Same as clicking the icon. The switch shows the current state. |
 | **Start with Windows** | Starts LidFlip when you sign in. |
 | **Pin next to clock** | Keeps the icon out of the `^` overflow (Windows 11). |
 | **How LidFlip works** | Opens the guide again. |
@@ -105,7 +111,9 @@ The setting applies to the **current power plan**. If you switch plans, flip aga
 src/Core.cs      entry point, power setting, startup, pin, settings
 src/TrayApp.cs   tray icon, menu, flip animation
 src/Art.cs       icon drawing
+src/TrayMenu.cs  the Windows 11-style menu (switches, icons, animations)
 src/Guide.cs     first-run guide window and its illustrations
+src/Fluent.cs    Windows 11 colours, accent colour, fonts and icons
 build.cmd        build with the compiler built into Windows
 ```
 

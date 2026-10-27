@@ -14,8 +14,8 @@ namespace LidFlip
         readonly Timer animTimer = new Timer(), pinTimer = new Timer(), quitTimer = new Timer();
         Icon[] anim; int animIdx; int pinTries;
 
-        readonly ToolStripMenuItem miAwake, miStartup, miPin, miGuide, miExit;
         GuideForm guide;
+        TrayMenu menu;
 
         public TrayApp(bool forceGuide, bool silent, bool replaced)
         {
@@ -25,23 +25,12 @@ namespace LidFlip
             toAwake = ToIcons(Art.Transition(px, true));
             toSleep = ToIcons(Art.Transition(px, false));
 
-            // ----- menu -----
-            ContextMenuStrip menu = new ContextMenuStrip();
-            miAwake   = new ToolStripMenuItem("Stay awake when lid is closed", null, delegate { Toggle(); });
-            miStartup = new ToolStripMenuItem("Start with Windows", null, delegate { ToggleStartup(); });
-            miPin     = new ToolStripMenuItem("Pin next to clock", null, delegate { TogglePin(); });
-            miGuide   = new ToolStripMenuItem("How LidFlip works", null, delegate { ShowGuide(); });
-            miExit    = new ToolStripMenuItem("Exit", null, delegate { Quit(); });
-            menu.Items.AddRange(new ToolStripItem[] { miAwake, miStartup, miPin, new ToolStripSeparator(), miGuide, miExit });
-            menu.Opening += delegate
+            // ----- menu: our own custom-drawn popup (see TrayMenu.cs) -----
+            tray.MouseClick += delegate(object sender, MouseEventArgs e)
             {
-                try { miAwake.Checked = Power.GetLid() == Power.DoNothing; } catch { miAwake.Checked = false; }
-                miStartup.Checked = Startup.IsOn;
-                miPin.Visible = Pin.Supported;
-                miPin.Checked = Pin.Wanted;
+                if (e.Button == MouseButtons.Left) Toggle();
+                else if (e.Button == MouseButtons.Right) ShowMenu();
             };
-            tray.ContextMenuStrip = menu;
-            tray.MouseClick += delegate(object s, MouseEventArgs e) { if (e.Button == MouseButtons.Left) Toggle(); };
 
             // ----- animation player -----
             animTimer.Interval = 22;
@@ -117,6 +106,26 @@ namespace LidFlip
             else tray.Icon = awake ? iconAwake : iconSleep;
         }
 
+        static bool IsAwake()
+        {
+            try { return Power.GetLid() == Power.DoNothing; } catch { return false; }
+        }
+
+        void ShowMenu()
+        {
+            if (menu != null && !menu.IsDisposed) { menu.BeginClose(); return; }
+            List<MenuRow> rows = new List<MenuRow>();
+            rows.Add(MenuRow.Switch("Stay awake when lid is closed", TrayMenu.GlyphBolt, IsAwake, Toggle));
+            rows.Add(MenuRow.Switch("Start with Windows", TrayMenu.GlyphStartup, delegate { return Startup.IsOn; }, ToggleStartup));
+            if (Pin.Supported)
+                rows.Add(MenuRow.Switch("Pin next to clock", TrayMenu.GlyphPin, delegate { return Pin.Wanted; }, TogglePin));
+            rows.Add(MenuRow.Separator());
+            rows.Add(MenuRow.Command("How LidFlip works", TrayMenu.GlyphHelp, ShowGuide));
+            rows.Add(MenuRow.Command("Exit", TrayMenu.GlyphExit, Quit));
+            menu = new TrayMenu(IsAwake, rows);
+            menu.ShowNear(Cursor.Position);
+        }
+
         void Toggle()
         {
             try
@@ -175,6 +184,7 @@ namespace LidFlip
         {
             quitTimer.Stop(); pinTimer.Stop(); animTimer.Stop();
             if (guide != null && !guide.IsDisposed) guide.Close();
+            if (menu != null && !menu.IsDisposed) menu.Close();
             tray.Visible = false;
             tray.Dispose();
             ExitThread();
