@@ -1,7 +1,8 @@
-# Windows scripts must keep CRLF line endings
-*.ps1 text eol=crlf
-*.vbs text eol=crlf
+# Windows sources keep CRLF line endings
+*.cs  text eol=crlf
 *.cmd text eol=crlf
+*.yml text eol=lf
 *.md  text eol=lf
 *.gif binary
 *.png binary
+*.ico binary

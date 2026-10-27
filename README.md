@@ -9,80 +9,104 @@ LidFlip is a tiny tray app that flips what happens when you close your laptop li
 
 Use it to keep downloads, builds, renders, remote desktop sessions or an external monitor running with the lid shut ("clamshell mode"), then flip back to normal sleep before the laptop goes in a bag.
 
+### [⬇ Download LidFlip.exe](../../releases/latest/download/LidFlip.exe)
+
+One small file (~80 KB). No installer, no admin rights, nothing else to install — it runs on any Windows 10 or 11.
+
 ## Why not just use Windows settings?
 
-You can — but the option is buried several screens deep in Control Panel, it has to be changed separately for battery and charger, and **some laptop makers hide it entirely**. LidFlip changes both in one click, shows the current state at a glance, and works even when the setting is hidden.
-
-## Features
-
-- **One click** on the tray icon toggles the lid-close action (both on charger and on battery)
-- **Clear icon**: half-shut laptop + moon (sleeps) or lightning bolt (stays awake), with a transition animation
-- **Start with Windows** and **Pin next to clock** options in the right-click menu
-- Remembers the pin choice across restarts
-- **Single instance**: launching it again replaces the running copy (never two icons)
-- No admin rights, no installer framework, no dependencies — plain PowerShell + WinForms
-- Errors are shown in a dialog and written to `LidFlip.log`
-
-![Icons](assets/icons.png)
-
-## Requirements
-
-- Windows 10 or 11
-- Windows PowerShell 5.1 (built into Windows)
-- *Pin next to clock* uses a Windows 11 setting; on Windows 10, drag the icon out of the `^` overflow manually
-
-## Install
-
-1. Download the repo (**Code → Download ZIP**) and extract it.
-2. Double-click **`Install.cmd`**.
-
-This copies the app to `%LOCALAPPDATA%\LidFlip`, adds it to startup, and starts it.
-If the icon is hidden under the `^` arrow, right-click it → **Pin next to clock**.
-
-### Run without installing
-
-Double-click `src\LidFlip.vbs` (it starts the script with no console window).
-
-## Usage
-
-| Action | Result |
-|---|---|
-| Left-click icon | Toggle sleep ↔ stay awake |
-| Right-click → *Stay awake when lid is closed* | Same toggle, with a check mark showing the current state |
-| Right-click → *Start with Windows* | Add/remove the startup shortcut |
-| Right-click → *Pin next to clock* | Keep the icon out of the `^` overflow |
-| Right-click → *Exit* | Quit |
-
-> ⚠️ With **stay awake** on, the laptop keeps running when closed. Don't put it in a bag like that — it can overheat and drain the battery.
-
-## Uninstall
-
-Double-click **`Uninstall.cmd`**. It stops the app, removes the startup shortcut, the app folder and its registry key, and sets the lid action back to **Sleep**.
-To leave the lid setting as it is:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File uninstall.ps1 -KeepLidSetting
-```
+You can — but the option is buried several screens deep, it has to be changed separately for battery and charger, and **some laptop makers hide it entirely**. LidFlip changes both in one click, shows the current state at a glance, and works even when the setting is hidden.
 
 ## How it works
 
-- The lid action lives in the active power plan (`SUB_BUTTONS` / `LIDACTION`): `0` = do nothing, `1` = sleep. It is changed with `powercfg /setacvalueindex` and `/setdcvalueindex`.
-- Some laptop makers hide this setting, so plain `powercfg /q` shows nothing; the app reads it with `powercfg /qh`, which includes hidden settings.
-- *Pin next to clock* sets `IsPromoted = 1` for the app's entry under `HKCU\Control Panel\NotifyIconSettings` (Windows 11). The choice is saved in `HKCU\Software\LidFlip` and re-applied on launch.
-- Icons and animation frames are drawn at 256 px with GDI+ and downscaled to 32 px, generated once at startup.
-- A named mutex keeps one instance; a new launch signals the old one through a named event to quit, then takes over.
+The first time you run LidFlip, a short guide walks you through it. You can open it again any time from the menu (**How LidFlip works**).
 
-The setting applies to the **current power plan**. If you switch plans, toggle again in the new plan.
+<p align="center"><img src="assets/guide/window-light.png" width="420" alt="The LidFlip guide window"> <img src="assets/guide/window-dark.png" width="420" alt="The guide in dark mode"></p>
+
+### 1. Two states
+
+![Sleeps or stays on](assets/guide/option-0.png)
+
+The **moon** 🌙 means your laptop sleeps when you close the lid (the Windows default).
+The **lightning bolt** ⚡ means it keeps running.
+
+### 2. Click to flip
+
+![Click the icon to flip](assets/guide/option-1.png)
+
+Click the LidFlip icon next to the clock to switch. The icon animates — the lid swings, the badge flips — so you know it worked.
+
+### 3. Right-click for options
+
+![The right-click menu](assets/guide/option-2.png)
+
+| Option | What it does |
+|---|---|
+| **Stay awake when lid is closed** | Same as clicking the icon. The check mark shows the current state. |
+| **Start with Windows** | Starts LidFlip when you sign in. |
+| **Pin next to clock** | Keeps the icon out of the `^` overflow (Windows 11). |
+| **How LidFlip works** | Opens the guide again. |
+| **Exit** | Closes LidFlip. The lid setting stays as it is. |
+
+### 4. Start with Windows
+
+![Start with Windows](assets/guide/option-3.png)
+
+Turn this on so the icon is always there. Move `LidFlip.exe` to a permanent folder first (not Downloads) — Windows starts it from wherever it was when you ticked the option.
+
+### 5. Pin next to the clock
+
+![Pin next to the clock](assets/guide/option-4.png)
+
+Windows hides new tray icons under the `^` arrow. **Pin next to clock** keeps LidFlip on the taskbar and re-applies itself after restarts. On Windows 10, drag the icon out of the arrow instead.
+
+### 6. Before it goes in a bag
+
+![Flip back before packing](assets/guide/option-5.png)
+
+With ⚡ on, a closed laptop keeps running and can overheat inside a bag. Flip back to 🌙 before you pack it.
+
+## First launch: "Windows protected your PC"
+
+LidFlip isn't code-signed (certificates cost money), so Windows SmartScreen may warn about an unknown app the first time. Click **More info → Run anyway**.
+If you'd rather not trust a downloaded exe, build it yourself from the source in this repo — it takes seconds (see below). Each release also lists the SHA-256 checksum of `LidFlip.exe`.
+
+## Uninstall
+
+1. Right-click the icon → untick **Start with Windows** → **Exit**.
+2. Delete `LidFlip.exe`.
+
+To set the lid back to sleep, click the icon until it shows the 🌙 before you exit. LidFlip's own settings live in `HKCU\Software\LidFlip` and can be deleted too.
+
+## Build from source
+
+No Visual Studio needed — Windows already includes the C# compiler:
+
+```
+build.cmd
+```
+
+This produces `LidFlip.exe` next to the script. Releases are built the same way by GitHub Actions ([`.github/workflows/release.yml`](.github/workflows/release.yml)) whenever a `v*` tag is pushed.
+
+## Under the hood
+
+- The lid action is part of the active power plan (`SUB_BUTTONS` / `LIDACTION`): `0` = do nothing, `1` = sleep. LidFlip changes it with `powercfg` for both charger and battery.
+- Some laptop makers hide this setting, so plain `powercfg /q` shows nothing. LidFlip reads it with `powercfg /qh`, which includes hidden settings.
+- *Pin next to clock* sets `IsPromoted = 1` on LidFlip's entry under `HKCU\Control Panel\NotifyIconSettings`, and remembers the choice in `HKCU\Software\LidFlip`.
+- *Start with Windows* uses `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`.
+- Icons and animation frames are drawn with GDI+ at the size your display needs, so they stay sharp at any scaling.
+- Only one copy runs at a time; starting it again replaces the running copy.
+
+The setting applies to the **current power plan**. If you switch plans, flip again.
 
 ## Project layout
 
 ```
-src/LidFlip.ps1   the app
-src/LidFlip.vbs   silent launcher (no console window)
-install.ps1         per-user install + startup shortcut
-uninstall.ps1       removal + restore lid action to Sleep
-Install.cmd         double-click wrapper for install.ps1
-Uninstall.cmd       double-click wrapper for uninstall.ps1
+src/Core.cs      entry point, power setting, startup, pin, settings
+src/TrayApp.cs   tray icon, menu, flip animation
+src/Art.cs       icon drawing
+src/Guide.cs     first-run guide window and its illustrations
+build.cmd        build with the compiler built into Windows
 ```
 
 ## License
