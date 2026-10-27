@@ -171,7 +171,7 @@ namespace LidFlip
         public static Bitmap Tile(int px, Color top, Color bot, float tileScale, float lid,
                                   bool awakeBadge, float badgeScale, float badgeRot, float ripple)
         {
-            int big = Math.Max(256, px * 2);
+            int big = Math.Max(48, px * 3);     // 3x supersampling is plenty and keeps animations cheap
             using (Bitmap hi = new Bitmap(big, big, PixelFormat.Format32bppArgb))
             {
                 using (Graphics g = HQ(hi))

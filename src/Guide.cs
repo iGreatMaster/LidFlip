@@ -258,7 +258,7 @@ namespace LidFlip
         readonly Theme t = Theme.Current();
         readonly float s;
         readonly Timer anim = new Timer();
-        int page, dir = 1, hover = -1;    // hover: 0 back, 1 next, 10+n dot n
+        int page, dir = 1, hover = -1;    // hover: 0 back, 1 next, 2 skip, 10+n dot n
         double animT = 1;
         Bitmap illus;
 
@@ -300,6 +300,7 @@ namespace LidFlip
         RectangleF IllusRect { get { return new RectangleF(32 * s, 28 * s, 496 * s, 250 * s); } }
         Rectangle BackRect { get { return new Rectangle((int)(32 * s), (int)(492 * s), (int)(110 * s), (int)(34 * s)); } }
         Rectangle NextRect { get { return new Rectangle((int)(418 * s), (int)(492 * s), (int)(110 * s), (int)(34 * s)); } }
+        static Rectangle SkipRectFor(float s) { return new Rectangle((int)((W - 32 - 150) * s), (int)(292 * s), (int)(150 * s), (int)(24 * s)); }
         RectangleF DotRect(int i)
         {
             float total = (GuideArt.Pages - 1) * 16 * s + 22 * s;
@@ -369,10 +370,21 @@ namespace LidFlip
                 }
             }
 
-            // step, title and text
+            // step, "skip to the end", title and text
             using (Font fs = Fonts.Text(9f))
                 TextRenderer.DrawText(g, string.Format("STEP {0} OF {1}", page + 1, GuideArt.Pages), fs,
                     new Point((int)(32 * s), (int)(298 * s)), t.Sub);
+            if (page < GuideArt.Pages - 1)
+            {
+                Rectangle sk = SkipRectFor(s);
+                if (hover == 2)
+                    using (GraphicsPath sp = Art.RoundRect(sk, 4 * s))
+                    using (SolidBrush sb = new SolidBrush(t.Dark ? Color.FromArgb(18, 255, 255, 255) : Color.FromArgb(10, 0, 0, 0)))
+                        g.FillPath(sb, sp);
+                using (Font fk = Fonts.Text(9.5f))
+                    TextRenderer.DrawText(g, "Skip to the end  \u203A", fk, sk, t.Accent,
+                        TextFormatFlags.Right | TextFormatFlags.VerticalCenter | TextFormatFlags.LeftAndRightPadding);
+            }
             using (Font ft = Fonts.Title(15f))
                 TextRenderer.DrawText(g, GuideArt.Titles[page], ft, new Point((int)(30 * s), (int)(318 * s)), t.Text);
             using (Font fb = Fonts.Text(10.5f))
@@ -417,6 +429,7 @@ namespace LidFlip
         {
             if (page > 0 && BackRect.Contains(p)) return 0;
             if (NextRect.Contains(p)) return 1;
+            if (page < GuideArt.Pages - 1 && SkipRectFor(s).Contains(p)) return 2;
             for (int i = 0; i < GuideArt.Pages; i++)
             {
                 RectangleF d = DotRect(i);
@@ -444,6 +457,7 @@ namespace LidFlip
             int h = HitTest(e.Location);
             if (h == 0) Prev();
             else if (h == 1) Next();
+            else if (h == 2) SetPage(GuideArt.Pages - 1, 1);    // jump to the last tip
             else if (h >= 10 && h - 10 != page) SetPage(h - 10, h - 10 > page ? 1 : -1);
             base.OnMouseClick(e);
         }

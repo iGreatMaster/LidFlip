@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Threading;
 using System.Windows.Forms;
+using Timer = System.Windows.Forms.Timer;
 
 namespace LidFlip
 {
@@ -17,8 +19,16 @@ namespace LidFlip
         GuideForm guide;
         TrayMenu menu;
 
+        // The lid state is cached so the UI reacts instantly; powercfg runs in the background.
+        readonly Control ui = new Control();          // used to get back onto the UI thread
+        readonly object powerLock = new object();
+        bool awakeState, desired, workerBusy;
+
         public TrayApp(bool forceGuide, bool silent, bool replaced)
         {
+            ui.CreateControl();
+            try { awakeState = Power.GetLid() == Power.DoNothing; } catch { awakeState = false; }
+
             int px = Math.Max(16, SystemInformation.SmallIconSize.Width);   // 16/20/24/32 depending on display scaling
             iconAwake = ToIcon(Art.Still(px, true));
             iconSleep = ToIcon(Art.Still(px, false));
@@ -92,9 +102,7 @@ namespace LidFlip
 
         void Refresh(bool animate)
         {
-            int v;
-            try { v = Power.GetLid(); } catch { v = -1; }
-            bool awake = v == Power.DoNothing;
+            bool awake = awakeState;
             tray.Text = awake ? "LidFlip: lid closed = stays awake" : "LidFlip: lid closed = sleeps";
             if (animate)
             {
@@ -106,9 +114,24 @@ namespace LidFlip
             else tray.Icon = awake ? iconAwake : iconSleep;
         }
 
-        static bool IsAwake()
+        bool IsAwake() { return awakeState; }
+
+        /// <summary>Re-reads the real setting in the background and fixes the UI if it changed elsewhere.</summary>
+        void VerifyInBackground()
         {
-            try { return Power.GetLid() == Power.DoNothing; } catch { return false; }
+            ThreadPool.QueueUserWorkItem(delegate
+            {
+                bool actual;
+                try { actual = Power.GetLid() == Power.DoNothing; } catch { return; }
+                lock (powerLock) { if (workerBusy) return; }    // a change is in flight; it will settle the state
+                ui.BeginInvoke((MethodInvoker)delegate
+                {
+                    if (actual == awakeState) return;
+                    awakeState = actual;
+                    Refresh(false);
+                    if (menu != null && !menu.IsDisposed) menu.Resync();
+                });
+            });
         }
 
         void ShowMenu()
@@ -124,20 +147,49 @@ namespace LidFlip
             rows.Add(MenuRow.Command("Exit", TrayMenu.GlyphExit, Quit));
             menu = new TrayMenu(IsAwake, rows);
             menu.ShowNear(Cursor.Position);
+            VerifyInBackground();
         }
 
+        /// <summary>
+        /// Flips instantly in the UI, then applies the change in the background.
+        /// Rapid clicks are coalesced: the worker keeps going until the setting matches the last click.
+        /// </summary>
         void Toggle()
         {
-            try
+            awakeState = !awakeState;
+            Refresh(true);
+            lock (powerLock)
             {
-                Power.SetLid(Power.GetLid() == Power.DoNothing ? Power.Sleep : Power.DoNothing);
-                Refresh(true);
+                desired = awakeState;
+                if (workerBusy) return;
+                workerBusy = true;
             }
-            catch (Exception ex)
+            ThreadPool.QueueUserWorkItem(delegate
             {
-                Program.Error(ex.Message);
-                Refresh(false);
-            }
+                while (true)
+                {
+                    bool want;
+                    lock (powerLock) want = desired;
+                    try { Power.SetLid(want ? Power.DoNothing : Power.Sleep); }
+                    catch (Exception ex)
+                    {
+                        lock (powerLock) workerBusy = false;
+                        string msg = ex.Message;
+                        ui.BeginInvoke((MethodInvoker)delegate
+                        {
+                            try { awakeState = Power.GetLid() == Power.DoNothing; } catch { }
+                            Refresh(false);
+                            if (menu != null && !menu.IsDisposed) menu.Resync();
+                            Program.Error(msg);
+                        });
+                        return;
+                    }
+                    lock (powerLock)
+                    {
+                        if (desired == want) { workerBusy = false; return; }
+                    }
+                }
+            });
         }
 
         void ToggleStartup()
@@ -162,12 +214,14 @@ namespace LidFlip
             catch (Exception ex) { Program.Error(ex.Message); }
         }
 
-        // hide and show the icon so Explorer re-reads its pin setting
+        // hide and show the icon so Explorer re-reads its pin setting (without blocking the UI)
         void Reregister()
         {
             tray.Visible = false;
-            System.Threading.Thread.Sleep(300);
-            tray.Visible = true;
+            Timer t = new Timer();
+            t.Interval = 300;
+            t.Tick += delegate { t.Stop(); t.Dispose(); tray.Visible = true; };
+            t.Start();
         }
 
         void ShowGuide()
@@ -187,6 +241,7 @@ namespace LidFlip
             if (menu != null && !menu.IsDisposed) menu.Close();
             tray.Visible = false;
             tray.Dispose();
+            ui.Dispose();
             ExitThread();
         }
     }

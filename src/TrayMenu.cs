@@ -52,7 +52,7 @@ namespace LidFlip
         readonly Timer timer = new Timer();
         bool awake;
         Bitmap headerTile;
-        List<Bitmap> headerFrames; int headerIdx;
+        List<Bitmap> headerFrames; int headerIdx, headerTicket;
         double openT; bool closing;
         int targetY, hot = -1;
         Font fTitle, fState, fItem, fIcon;
@@ -359,7 +359,7 @@ namespace LidFlip
                 else
                 {
                     if (headerTile != null) headerTile.Dispose();
-                    headerTile = Art.Still(TilePx, awake);
+                    headerTile = Art.Still(TilePx, awake);   // matches the last frame
                     foreach (Bitmap b in headerFrames) b.Dispose();
                     headerFrames = null; headerIdx = 0;
                 }
@@ -397,21 +397,38 @@ namespace LidFlip
             MenuRow r = rows[i];
             if (r.Do != null) r.Do();
             if (IsDisposed || closing) return;
-            if (r.IsToggle)
-            {
-                // re-read every toggle (one change can affect another) and animate the switches
-                foreach (MenuRow x in rows) if (x.IsToggle) x.On = MenuRow.SafeGet(x.Get);
-                bool nowAwake = MenuRow.SafeGet(getAwake);
-                if (nowAwake != awake)
-                {
-                    awake = nowAwake;
-                    if (headerFrames != null) foreach (Bitmap b in headerFrames) b.Dispose();
-                    headerFrames = Art.Transition(TilePx, awake);
-                    headerIdx = 0;
-                }
-                timer.Start();
-            }
+            if (r.IsToggle) Resync();
             else BeginClose();
+        }
+
+        /// <summary>Re-reads every switch and the header state, and animates whatever changed.</summary>
+        public void Resync()
+        {
+            if (IsDisposed) return;
+            foreach (MenuRow x in rows) if (x.IsToggle) x.On = MenuRow.SafeGet(x.Get);
+            bool nowAwake = MenuRow.SafeGet(getAwake);
+            if (nowAwake != awake)
+            {
+                awake = nowAwake;
+                // draw the header animation frames off the UI thread, so the switch starts moving at once
+                bool target = awake; int px = TilePx; int ticket = ++headerTicket;
+                System.Threading.ThreadPool.QueueUserWorkItem(delegate
+                {
+                    List<Bitmap> frames = Art.Transition(px, target);
+                    try
+                    {
+                        BeginInvoke((MethodInvoker)delegate
+                        {
+                            if (IsDisposed || ticket != headerTicket) { foreach (Bitmap b in frames) b.Dispose(); return; }
+                            if (headerFrames != null) foreach (Bitmap b in headerFrames) b.Dispose();
+                            headerFrames = frames; headerIdx = 0;
+                            timer.Start();
+                        });
+                    }
+                    catch { foreach (Bitmap b in frames) b.Dispose(); }   // menu already closed
+                });
+            }
+            timer.Start();
         }
 
         protected override void Dispose(bool disposing)
