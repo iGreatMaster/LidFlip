@@ -15,6 +15,9 @@ namespace LidFlip
         readonly Icon[] toAwake, toSleep;
         readonly Timer animTimer = new Timer(), pinTimer = new Timer(), quitTimer = new Timer();
         Icon[] anim; int animIdx; int pinTries;
+        MethodInvoker animDone;     // runs when the current animation finishes
+        int iconPx;
+        bool quitting;
 
         GuideForm guide;
         TrayMenu menu;
@@ -30,6 +33,7 @@ namespace LidFlip
             try { awakeState = Power.GetLid() == Power.DoNothing; } catch { awakeState = false; }
 
             int px = Math.Max(16, SystemInformation.SmallIconSize.Width);   // 16/20/24/32 depending on display scaling
+            iconPx = px;
             iconAwake = ToIcon(Art.Still(px, true));
             iconSleep = ToIcon(Art.Still(px, false));
             toAwake = ToIcons(Art.Transition(px, true));
@@ -46,12 +50,17 @@ namespace LidFlip
             animTimer.Interval = 22;
             animTimer.Tick += delegate
             {
-                if (anim != null && animIdx < anim.Length) tray.Icon = anim[animIdx++];
-                else animTimer.Stop();
+                if (anim != null && animIdx < anim.Length) { tray.Icon = anim[animIdx++]; return; }
+                animTimer.Stop();
+                if (animDone != null) { MethodInvoker d = animDone; animDone = null; d(); }
             };
 
+            // start-up animation: pop into the tray
+            Icon[] intro = ToIcons(Art.Intro(px, awakeState));
             Refresh(false);
+            tray.Icon = intro[0];
             tray.Visible = true;
+            Play(intro, delegate { Refresh(false); });
 
             // ----- re-apply "pin next to clock" after a restart -----
             // Explorer may register the icon a few seconds late at sign-in, so retry for about a minute.
@@ -104,14 +113,15 @@ namespace LidFlip
         {
             bool awake = awakeState;
             tray.Text = awake ? "LidFlip: lid closed = stays awake" : "LidFlip: lid closed = sleeps";
-            if (animate)
-            {
-                anim = awake ? toAwake : toSleep;
-                animIdx = 0;
-                animTimer.Stop();
-                animTimer.Start();
-            }
+            if (animate) Play(awake ? toAwake : toSleep, null);
             else tray.Icon = awake ? iconAwake : iconSleep;
+        }
+
+        void Play(Icon[] frames, MethodInvoker done)
+        {
+            animTimer.Stop();
+            anim = frames; animIdx = 0; animDone = done;
+            animTimer.Start();
         }
 
         bool IsAwake() { return awakeState; }
@@ -156,6 +166,7 @@ namespace LidFlip
         /// </summary>
         void Toggle()
         {
+            if (quitting) return;
             awakeState = !awakeState;
             Refresh(true);
             lock (powerLock)
@@ -234,15 +245,24 @@ namespace LidFlip
             guide.Activate();
         }
 
+        /// <summary>Exit with the closing animation (lid shuts, icon shrinks away), then quit.</summary>
         void Quit()
         {
-            quitTimer.Stop(); pinTimer.Stop(); animTimer.Stop();
+            if (quitting) return;
+            quitting = true;
+            quitTimer.Stop(); pinTimer.Stop();
             if (guide != null && !guide.IsDisposed) guide.Close();
-            if (menu != null && !menu.IsDisposed) menu.Close();
-            tray.Visible = false;
-            tray.Dispose();
-            ui.Dispose();
-            ExitThread();
+            if (menu != null && !menu.IsDisposed) menu.BeginClose();
+            Icon[] outro;
+            try { outro = ToIcons(Art.Outro(iconPx, awakeState)); }
+            catch { outro = new Icon[0]; }
+            Play(outro, delegate
+            {
+                tray.Visible = false;
+                tray.Dispose();
+                ui.Dispose();
+                ExitThread();
+            });
         }
     }
 }

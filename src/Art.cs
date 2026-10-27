@@ -122,6 +122,7 @@ namespace LidFlip
                              bool awakeBadge, float badgeScale, float badgeRot, float ripple)
         {
             float size = 236 * tileScale, off = (256 - size) / 2;
+            if (size < 3) return;                                   // nothing visible (start/exit animations)
             RectangleF tr = new RectangleF(off, off, size, size);
             using (GraphicsPath tile = RoundRect(tr, 70 * tileScale))
             {
@@ -144,6 +145,11 @@ namespace LidFlip
                 g.Clip = oldClip;
             }
 
+            // the laptop and badge scale with the tile (squish, start-up and exit animations)
+            GraphicsState glyphState = g.Save();
+            g.TranslateTransform(128, 128);
+            g.ScaleTransform(tileScale, tileScale);
+            g.TranslateTransform(-128, -128);
             using (SolidBrush white = new SolidBrush(Color.White))
             using (SolidBrush notch = new SolidBrush(Color.FromArgb(110, 0, 0, 0)))
             using (Pen lidPen = new Pen(Color.White, 18))
@@ -165,6 +171,7 @@ namespace LidFlip
                     g.Restore(st);
                 }
             }
+            g.Restore(glyphState);
         }
 
         /// <summary>Renders a tile at any pixel size (supersampled, then downscaled).</summary>
@@ -195,6 +202,43 @@ namespace LidFlip
             return awake
                 ? Tile(px, AwakeTop, AwakeBot, 1, LidRest, true, 1, 0, 0)
                 : Tile(px, SleepTop, SleepBot, 1, LidRest, false, 1, 0, 0);
+        }
+
+        /// <summary>Start-up: the tile pops in, the lid swings open and settles, the badge appears.</summary>
+        public static List<Bitmap> Intro(int px, bool awake)
+        {
+            const int N = 20;
+            List<Bitmap> frames = new List<Bitmap>();
+            Color top = awake ? AwakeTop : SleepTop, bot = awake ? AwakeBot : SleepBot;
+            for (int i = 1; i <= N; i++)
+            {
+                double t = (double)i / N;
+                float ts = (float)Math.Min(1.05, EaseBack(Math.Min(1, t / 0.55)));
+                float lid = (float)(LidRest + 46 * Math.Sin(Math.PI * t));
+                double bp = t < 0.35 ? 0 : (t - 0.35) / 0.65;
+                float bs = (float)EaseBack(bp), br = (float)(-120 * (1 - bp));
+                float ripple = t > 0.55 ? (float)((t - 0.55) / 0.45) : 0;
+                frames.Add(Tile(px, top, bot, Math.Max(0, ts), lid, awake, bs, br, ripple));
+            }
+            return frames;
+        }
+
+        /// <summary>Exit: the badge goes, the lid shuts all the way (the laptop "sleeps"), the tile shrinks away.</summary>
+        public static List<Bitmap> Outro(int px, bool awake)
+        {
+            const int N = 18;
+            List<Bitmap> frames = new List<Bitmap>();
+            Color top = awake ? AwakeTop : SleepTop, bot = awake ? AwakeBot : SleepBot;
+            for (int i = 1; i <= N; i++)
+            {
+                double t = (double)i / N;
+                float bs = (float)(1 - EaseInOut(Math.Min(1, t / 0.35)));
+                float br = (float)(120 * Math.Min(1, t / 0.35));
+                float lid = (float)(LidRest * (1 - EaseInOut(Math.Min(1, t / 0.5))));
+                float ts = t < 0.5 ? (float)(1 + 0.06 * Math.Sin(Math.PI * t / 0.5)) : (float)(1 - EaseInOut((t - 0.5) / 0.5));
+                frames.Add(Tile(px, top, bot, ts, lid, awake, bs, br, 0));
+            }
+            return frames;
         }
 
         /// <summary>
