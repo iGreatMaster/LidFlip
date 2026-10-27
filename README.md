@@ -120,9 +120,11 @@ build.cmd        build with the compiler built into Windows
 
 ## Code signing policy
 
-Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+LidFlip has applied to the [SignPath Foundation](https://signpath.org) for free code signing. **Current releases are not signed yet.**
+Once the application is approved: free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).
 
-- Release builds are made only by GitHub Actions from the source in this repository ([`release.yml`](.github/workflows/release.yml)), and every signing request is approved manually.
+- Release builds are made only by GitHub Actions from the source in this repository ([`release.yml`](.github/workflows/release.yml)).
+- Once signing is in place, every signing request will be approved manually.
 - Committers and reviewers: [iGreatMaster](https://github.com/iGreatMaster)
 - Approvers: [iGreatMaster](https://github.com/iGreatMaster)
 
