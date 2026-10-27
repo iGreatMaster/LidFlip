@@ -12,6 +12,7 @@ Use it to keep downloads, builds, renders, remote desktop sessions or an externa
 ### [⬇ Download LidFlip.exe](../../releases/latest/download/LidFlip.exe)
 
 One small file (~80 KB). No installer, no admin rights, nothing else to install — it runs on any Windows 10 or 11.
+[Code signing policy](#code-signing-policy) · [Privacy policy](#privacy-policy)
 
 ## Why not just use Windows settings?
 
@@ -116,6 +117,19 @@ src/Guide.cs     first-run guide window and its illustrations
 src/Fluent.cs    Windows 11 colours, accent colour, fonts and icons
 build.cmd        build with the compiler built into Windows
 ```
+
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+
+- Release builds are made only by GitHub Actions from the source in this repository ([`release.yml`](.github/workflows/release.yml)), and every signing request is approved manually.
+- Committers and reviewers: [iGreatMaster](https://github.com/iGreatMaster)
+- Approvers: [iGreatMaster](https://github.com/iGreatMaster)
+
+## Privacy policy
+
+This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it.
+LidFlip makes no network connections at all: it only runs Windows' own `powercfg` and writes the registry keys listed in [Under the hood](#under-the-hood).
 
 ## License
 
