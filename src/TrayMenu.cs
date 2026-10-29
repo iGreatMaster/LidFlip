@@ -78,7 +78,7 @@ namespace LidFlip
             fIcon = Fonts.Icons(11f);       // null when no icon font is installed
 
             awake = MenuRow.SafeGet(getAwake);
-            headerTile = Art.Still(TilePx, awake);
+            headerTile = TrayGlyph.Still(TilePx, awake, t.Text, t.Accent);
             ClientSize = new Size((int)(Width0 * s), (int)LayoutRows(rows, s));
 
             timer.Interval = 15;
@@ -146,7 +146,7 @@ namespace LidFlip
             float hy = Pad * s;
             if (tile != null) g.DrawImage(tile, 14 * s, hy + 12 * s, 36 * s, 36 * s);
             TextRenderer.DrawText(g, "LidFlip", fTitle, new Point((int)(60 * s), (int)(hy + 11 * s)), t.Text, TextFormatFlags.NoPadding);
-            using (SolidBrush db = new SolidBrush(awake ? Art.AwakeTop : Art.SleepTop))
+            using (SolidBrush db = new SolidBrush(awake ? t.Accent : t.Sub))
                 g.FillEllipse(db, 61 * s, hy + 37 * s, 6 * s, 6 * s);
             TextRenderer.DrawText(g, awake ? "Lid closed: stays awake" : "Lid closed: sleeps", fState,
                 new Point((int)(72 * s), (int)(hy + 32 * s)), t.Sub, TextFormatFlags.NoPadding);
@@ -263,7 +263,7 @@ namespace LidFlip
             Bitmap b = new Bitmap(w, h);
             b.SetResolution(96 * s, 96 * s);
             using (Graphics g = Graphics.FromImage(b))
-            using (Bitmap tile = Art.Still((int)(36 * s), awake))
+            using (Bitmap tile = TrayGlyph.Still((int)(36 * s), awake, t.Text, t.Accent))
             using (Font f1 = Fonts.Title(10.5f)) using (Font f2 = Fonts.Text(9f)) using (Font f3 = Fonts.Text(10f))
             {
                 Font fi = Fonts.Icons(11f);
@@ -359,7 +359,7 @@ namespace LidFlip
                 else
                 {
                     if (headerTile != null) headerTile.Dispose();
-                    headerTile = Art.Still(TilePx, awake);   // matches the last frame
+                    headerTile = TrayGlyph.Still(TilePx, awake, t.Text, t.Accent);   // matches the last frame
                     foreach (Bitmap b in headerFrames) b.Dispose();
                     headerFrames = null; headerIdx = 0;
                 }
@@ -414,7 +414,7 @@ namespace LidFlip
                 bool target = awake; int px = TilePx; int ticket = ++headerTicket;
                 System.Threading.ThreadPool.QueueUserWorkItem(delegate
                 {
-                    List<Bitmap> frames = Art.Transition(px, target);
+                    List<Bitmap> frames = TrayGlyph.Transition(px, target, t.Text, t.Accent);
                     try
                     {
                         BeginInvoke((MethodInvoker)delegate

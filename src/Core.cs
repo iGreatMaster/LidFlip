@@ -15,8 +15,8 @@ using Microsoft.Win32;
 [assembly: AssemblyProduct("LidFlip")]
 [assembly: AssemblyDescription("Choose what happens when you close your laptop lid")]
 [assembly: AssemblyCopyright("Copyright (c) 2026 Ahmed. MIT License.")]
-[assembly: AssemblyVersion("1.0.2.0")]
-[assembly: AssemblyFileVersion("1.0.2.0")]
+[assembly: AssemblyVersion("1.0.3.0")]
+[assembly: AssemblyFileVersion("1.0.3.0")]
 
 namespace LidFlip
 {

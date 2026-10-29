@@ -50,9 +50,9 @@ namespace LidFlip
             return new RectangleF(r.X + (r.Width - w) / 2, r.Y + (r.Height - h) / 2, w, h);
         }
 
-        static void DrawTileAt(Graphics g, float x, float y, float px, bool awake)
+        static void DrawTileAt(Graphics g, float x, float y, float px, bool awake, Theme t)
         {
-            using (Bitmap b = Art.Still(Math.Max(8, (int)px), awake))
+            using (Bitmap b = TrayGlyph.Still(Math.Max(8, (int)px), awake, t.Text, t.Accent))
                 g.DrawImage(b, x, y, px, px);
         }
 
@@ -85,8 +85,8 @@ namespace LidFlip
         {
             float px = 104 * s, gap = 84 * s;
             float x1 = r.X + (r.Width - 2 * px - gap) / 2, y = r.Y + 38 * s;
-            DrawTileAt(g, x1, y, px, false);
-            DrawTileAt(g, x1 + px + gap, y, px, true);
+            DrawTileAt(g, x1, y, px, false, t);
+            DrawTileAt(g, x1 + px + gap, y, px, true, t);
             Caption(g, "Lid closed:\nsleeps", new RectangleF(x1 - 30 * s, y + px + 14 * s, px + 60 * s, 50 * s), t.Text, 10f, FontStyle.Regular);
             Caption(g, "Lid closed:\nstays on", new RectangleF(x1 + px + gap - 30 * s, y + px + 14 * s, px + 60 * s, 50 * s), t.Text, 10f, FontStyle.Regular);
             using (Font f = F(16f, FontStyle.Regular))
@@ -238,8 +238,8 @@ namespace LidFlip
         {
             float px = 96 * s, gap = 92 * s;
             float x1 = r.X + (r.Width - 2 * px - gap) / 2, y = r.Y + 40 * s;
-            DrawTileAt(g, x1, y, px, true);
-            DrawTileAt(g, x1 + px + gap, y, px, false);
+            DrawTileAt(g, x1, y, px, true, t);
+            DrawTileAt(g, x1 + px + gap, y, px, false, t);
 
             // warning triangle on the awake tile
             float tx = x1 + px - 18 * s, ty = y - 10 * s, ts = 34 * s;
