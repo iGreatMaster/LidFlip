@@ -216,7 +216,7 @@ namespace LidFlip
                 float ts = (float)Math.Min(1.05, EaseBack(Math.Min(1, t / 0.55)));
                 float lid = (float)(LidRest + 46 * Math.Sin(Math.PI * t));
                 double bp = t < 0.35 ? 0 : (t - 0.35) / 0.65;
-                float bs = (float)EaseBack(bp), br = (float)(-120 * (1 - bp));
+                float bs = (float)EaseBack(bp), br = (float)(120 * (1 - bp));      // counter-clockwise, with the lid opening
                 float ripple = t > 0.55 ? (float)((t - 0.55) / 0.45) : 0;
                 frames.Add(Tile(px, top, bot, Math.Max(0, ts), lid, awake, bs, br, ripple));
             }
@@ -251,7 +251,7 @@ namespace LidFlip
             List<Bitmap> frames = new List<Bitmap>();
             Color fT = toAwake ? SleepTop : AwakeTop, fB = toAwake ? SleepBot : AwakeBot;
             Color tT = toAwake ? AwakeTop : SleepTop, tB = toAwake ? AwakeBot : SleepBot;
-            int dir = toAwake ? 1 : -1;
+            const int dir = 1;   // always spin the way the lid swings open (counter-clockwise), whichever way we flip
             for (int i = 1; i <= N; i++)
             {
                 double t = (double)i / N, c = EaseInOut(t);
