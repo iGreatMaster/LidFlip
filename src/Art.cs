@@ -17,12 +17,8 @@ namespace LidFlip
         public static readonly Color AwakeBot = ColorTranslator.FromHtml("#047857");
         public static readonly Color SleepTop = ColorTranslator.FromHtml("#818CF8");
         public static readonly Color SleepBot = ColorTranslator.FromHtml("#3730A3");
-        public const float LidRest = 24f;       // resting lid angle: half-shut reads as "closing the lid"
+        public const float LidRest = TrayGlyph.LidRest;       // resting lid angle: half-shut reads as "closing the lid"
 
-        static readonly PointF[] Moon = BuildCrescent();
-        static readonly PointF[] Bolt = {
-            new PointF(10, -48), new PointF(-28, 8), new PointF(-4, 8),
-            new PointF(-12, 48), new PointF(28, -10), new PointF(4, -10) };
 
         // ---------- helpers ----------
         public static GraphicsPath RoundRect(RectangleF r, float rad)
@@ -69,53 +65,6 @@ namespace LidFlip
             return 1 + c3 * Math.Pow(t - 1, 3) + c1 * Math.Pow(t - 1, 2);
         }
 
-        // Crescent = points of the outer circle that lie outside the inner circle,
-        // joined to the points of the inner circle that lie inside the outer one.
-        static PointF[] BuildCrescent()
-        {
-            const double r1 = 42, cx2 = 20, cy2 = -20, r2 = 40;
-            List<PointF> outer = new List<PointF>(), inner = new List<PointF>();
-            // walk the outer circle starting from a point that is surely outside the cut-out
-            for (int i = 0; i < 360; i++)
-            {
-                double a = (135 + i) * Math.PI / 180;
-                double x = r1 * Math.Cos(a), y = r1 * Math.Sin(a);
-                if (Math.Sqrt((x - cx2) * (x - cx2) + (y - cy2) * (y - cy2)) >= r2) outer.Add(new PointF((float)x, (float)y));
-                else break;
-            }
-            for (int i = 359; i > 0; i--)   // and backwards, to get the arc in one contiguous piece
-            {
-                double a = (135 + i) * Math.PI / 180;
-                double x = r1 * Math.Cos(a), y = r1 * Math.Sin(a);
-                if (Math.Sqrt((x - cx2) * (x - cx2) + (y - cy2) * (y - cy2)) >= r2) outer.Insert(0, new PointF((float)x, (float)y));
-                else break;
-            }
-            for (int i = 0; i < 360; i++)
-            {
-                double a = i * Math.PI / 180;
-                double x = cx2 + r2 * Math.Cos(a), y = cy2 + r2 * Math.Sin(a);
-                if (Math.Sqrt(x * x + y * y) <= r1) inner.Add(new PointF((float)x, (float)y));
-            }
-            // inner points may wrap around 0 deg: rotate so they are contiguous
-            int split = 0;
-            for (int i = 1; i < inner.Count; i++)
-            {
-                double dx = inner[i].X - inner[i - 1].X, dy = inner[i].Y - inner[i - 1].Y;
-                if (dx * dx + dy * dy > 16) { split = i; break; }
-            }
-            List<PointF> innerOrdered = new List<PointF>();
-            for (int i = 0; i < inner.Count; i++) innerOrdered.Add(inner[(split + i) % inner.Count]);
-            // connect outer's end to the nearest end of the inner arc
-            PointF end = outer[outer.Count - 1];
-            PointF i0 = innerOrdered[0], i1 = innerOrdered[innerOrdered.Count - 1];
-            double d0 = (i0.X - end.X) * (i0.X - end.X) + (i0.Y - end.Y) * (i0.Y - end.Y);
-            double d1 = (i1.X - end.X) * (i1.X - end.X) + (i1.Y - end.Y) * (i1.Y - end.Y);
-            if (d1 < d0) innerOrdered.Reverse();
-            List<PointF> all = new List<PointF>(outer);
-            all.AddRange(innerOrdered);
-            return all.ToArray();
-        }
-
         // ---------- the tile ----------
         /// <summary>Draws one tile into g, in a 256x256 box at the origin of g's current transform.</summary>
         static void DrawTile(Graphics g, Color top, Color bot, float tileScale, float lid,
@@ -145,32 +94,13 @@ namespace LidFlip
                 g.Clip = oldClip;
             }
 
-            // the laptop and badge scale with the tile (squish, start-up and exit animations)
+            // The same glyph as the tray icon (TrayGlyph), in white, centred in the tile.
+            // It scales with the tile (squish, start-up and exit animations).
             GraphicsState glyphState = g.Save();
             g.TranslateTransform(128, 128);
-            g.ScaleTransform(tileScale, tileScale);
-            g.TranslateTransform(-128, -128);
-            using (SolidBrush white = new SolidBrush(Color.White))
-            using (SolidBrush notch = new SolidBrush(Color.FromArgb(110, 0, 0, 0)))
-            using (Pen lidPen = new Pen(Color.White, 18))
-            {
-                // base (keyboard) with a little front notch, and the hinged lid
-                using (GraphicsPath basePath = RoundRect(new RectangleF(36, 178, 184, 26), 12)) g.FillPath(white, basePath);
-                using (GraphicsPath n = RoundRect(new RectangleF(108, 192, 40, 8), 4)) g.FillPath(notch, n);
-                lidPen.StartCap = LineCap.Round; lidPen.EndCap = LineCap.Round;
-                double a = lid * Math.PI / 180;
-                g.DrawLine(lidPen, 50, 166, (float)(50 + 116 * Math.Cos(a)), (float)(166 - 116 * Math.Sin(a)));
-
-                if (badgeScale > 0.02f)
-                {
-                    GraphicsState st = g.Save();
-                    g.TranslateTransform(182, 68);
-                    g.RotateTransform(badgeRot);
-                    g.ScaleTransform(badgeScale * 0.85f, badgeScale * 0.85f);
-                    g.FillPolygon(white, awakeBadge ? Bolt : Moon);
-                    g.Restore(st);
-                }
-            }
+            g.ScaleTransform(tileScale * 7.2f, tileScale * 7.2f);   // 24-unit glyph -> ~173 of the 256-unit tile
+            g.TranslateTransform(-12, -12);
+            TrayGlyph.Draw(g, Color.White, Color.White, 1, lid, awakeBadge, badgeScale, badgeRot, 0);
             g.Restore(glyphState);
         }
 
@@ -256,10 +186,10 @@ namespace LidFlip
                 double t = (double)i / N, c = EaseInOut(t);
                 float tileScale = (float)(1 - 0.10 * Math.Sin(Math.PI * t));
                 double lift = t < 0.8 ? Math.Sin(Math.PI * t / 0.8) : 0.13 * Math.Sin(Math.PI * (t - 0.8) / 0.2);
-                float lid = (float)(LidRest + 46 * lift);
+                float lid = (float)(LidRest + 40 * lift);
                 bool badgeAwake = t < 0.4 ? !toAwake : toAwake;          // swap at the top of the swing
                 float bs = (float)Math.Max(0, 1 - lift);
-                float br = 3.2f * 46 * (float)lift;                      // meshes with the lid like a gear
+                float br = 3.5f * 40 * (float)lift;                      // meshes with the lid like a gear
                 float ripple = t > 0.7 ? (float)((t - 0.7) / 0.3) : 0;
                 frames.Add(Tile(px, Mix(fT, tT, c), Mix(fB, tB, c), tileScale, lid, badgeAwake, bs, br, ripple));
             }
