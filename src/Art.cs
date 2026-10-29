@@ -251,25 +251,15 @@ namespace LidFlip
             List<Bitmap> frames = new List<Bitmap>();
             Color fT = toAwake ? SleepTop : AwakeTop, fB = toAwake ? SleepBot : AwakeBot;
             Color tT = toAwake ? AwakeTop : SleepTop, tB = toAwake ? AwakeBot : SleepBot;
-            const int dir = -1;  // always spin clockwise, whichever way we flip
             for (int i = 1; i <= N; i++)
             {
                 double t = (double)i / N, c = EaseInOut(t);
                 float tileScale = (float)(1 - 0.10 * Math.Sin(Math.PI * t));
-                float lid = (float)(t < 0.8
-                    ? LidRest + 46 * Math.Sin(Math.PI * t / 0.8)
-                    : LidRest + 6 * Math.Sin(Math.PI * (t - 0.8) / 0.2));
-                bool badgeAwake; float bs, br;
-                if (t < 0.4)
-                {
-                    double p = t / 0.4;
-                    badgeAwake = !toAwake; bs = (float)(1 - EaseInOut(p)); br = (float)(-160 * p * dir);
-                }
-                else
-                {
-                    double p = (t - 0.4) / 0.6;
-                    badgeAwake = toAwake; bs = (float)EaseBack(p); br = (float)(160 * (1 - p) * dir);
-                }
+                double lift = t < 0.8 ? Math.Sin(Math.PI * t / 0.8) : 0.13 * Math.Sin(Math.PI * (t - 0.8) / 0.2);
+                float lid = (float)(LidRest + 46 * lift);
+                bool badgeAwake = t < 0.4 ? !toAwake : toAwake;          // swap at the top of the swing
+                float bs = (float)Math.Max(0, 1 - lift);
+                float br = -3.2f * 46 * (float)lift;                     // geared to the lid, both ways
                 float ripple = t > 0.7 ? (float)((t - 0.7) / 0.3) : 0;
                 frames.Add(Tile(px, Mix(fT, tT, c), Mix(fB, tB, c), tileScale, lid, badgeAwake, bs, br, ripple));
             }

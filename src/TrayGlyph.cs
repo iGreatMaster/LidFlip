@@ -136,54 +136,56 @@ namespace LidFlip
             return Render(px, fg, accent, 1, LidRest, awake, 1, 0, 0);
         }
 
-        /// <summary>Flip: the lid swings up and shuts with a bounce, the old badge spins away, the new one pops in.</summary>
+        // The badge is geared to the lid: every degree the lid moves turns the badge this many degrees
+        // the same way (GDI+ angles grow clockwise, the lid's angle grows counter-clockwise).
+        const float Gear = 3.5f;
+        const float Swing = 40f;     // how far the lid opens above its resting angle during a flip
+
+        /// <summary>
+        /// Flip, in sync with the lid: as the lid rises the old badge turns with it and shrinks away;
+        /// at the top the badges swap; as the lid comes down the new one turns back with it and grows in.
+        /// </summary>
         public static List<Bitmap> Transition(int px, bool toAwake, Color fg, Color accent)
         {
-            const int N = 22;
+            const int N = 24;
             List<Bitmap> frames = new List<Bitmap>();
-            const int dir = -1;  // always spin clockwise, whichever way we flip
             for (int i = 1; i <= N; i++)
             {
                 double t = (double)i / N;
-                float lid = (float)(t < 0.8
-                    ? LidRest + 40 * Math.Sin(Math.PI * t / 0.8)
-                    : LidRest + 5 * Math.Sin(Math.PI * (t - 0.8) / 0.2));
-                bool badgeAwake; float bs, br;
-                if (t < 0.4)
-                {
-                    double p = t / 0.4;
-                    badgeAwake = !toAwake; bs = (float)(1 - Art.EaseInOut(p)); br = (float)(-150 * p * dir);
-                }
-                else
-                {
-                    double p = (t - 0.4) / 0.6;
-                    badgeAwake = toAwake; bs = (float)Pop(p); br = (float)(150 * (1 - p) * dir);
-                }
-                float ring = t > 0.55 ? (float)((t - 0.55) / 0.45) : 0;
+                double lift = t < 0.8 ? Math.Sin(Math.PI * t / 0.8) : 0.14 * Math.Sin(Math.PI * (t - 0.8) / 0.2);
+                float lid = (float)(LidRest + Swing * lift);
+                bool rising = t < 0.4;                                  // the lid peaks at t = 0.4
+                bool badgeAwake = rising ? !toAwake : toAwake;
+                float bs = (float)Math.Max(0, 1 - lift);                // fully gone at the top, back as the lid lands
+                float br = -Gear * Swing * (float)lift;                 // turns with the lid, both ways
+                float ring = t > 0.6 ? (float)((t - 0.6) / 0.4) : 0;
                 frames.Add(Render(px, fg, accent, 1, lid, badgeAwake, bs, br, ring));
             }
             return frames;
         }
 
-        /// <summary>Start-up: the laptop pops in, the lid swings open and settles, the badge appears.</summary>
+        /// <summary>Start-up: the laptop pops in, the lid swings up, and the badge rides in as it comes down.</summary>
         public static List<Bitmap> Intro(int px, bool awake, Color fg, Color accent)
         {
-            const int N = 20;
+            const int N = 22;
             List<Bitmap> frames = new List<Bitmap>();
             for (int i = 1; i <= N; i++)
             {
                 double t = (double)i / N;
-                float scale = (float)Math.Max(0, Math.Min(1.06, Art.EaseBack(Math.Min(1, t / 0.5))));
-                float lid = (float)(LidRest * Art.EaseOut(Math.Min(1, t / 0.3)) + 40 * Math.Sin(Math.PI * Math.Min(1, t / 0.85)));
-                double bp = t < 0.4 ? 0 : (t - 0.4) / 0.6;
-                float bs = (float)Pop(bp), br = (float)(-120 * (1 - bp));     // clockwise, like the flips
-                float ring = t > 0.6 ? (float)((t - 0.6) / 0.4) : 0;
+                float scale = (float)Math.Max(0, Math.Min(1.06, Art.EaseBack(Math.Min(1, t / 0.45))));
+                double lift = Math.Sin(Math.PI * Math.Min(1, t / 0.9));                 // up and back down
+                double open = Art.EaseOut(Math.Min(1, t / 0.3));                        // from shut to resting
+                float lid = (float)(LidRest * open + Swing * lift);
+                bool down = t > 0.45;                                                    // past the top
+                float bs = down ? (float)Math.Max(0, 1 - lift) : 0;
+                float br = -Gear * Swing * (float)lift;
+                float ring = t > 0.65 ? (float)((t - 0.65) / 0.35) : 0;
                 frames.Add(Render(px, fg, accent, scale, lid, awake, bs, br, ring));
             }
             return frames;
         }
 
-        /// <summary>Exit: the badge goes, the lid shuts all the way (the laptop "sleeps"), the glyph shrinks away.</summary>
+        /// <summary>Exit: the lid shuts and carries the badge away with it, then the glyph shrinks away.</summary>
         public static List<Bitmap> Outro(int px, bool awake, Color fg, Color accent)
         {
             const int N = 18;
@@ -191,9 +193,10 @@ namespace LidFlip
             for (int i = 1; i <= N; i++)
             {
                 double t = (double)i / N;
-                float bs = (float)(1 - Art.EaseInOut(Math.Min(1, t / 0.35)));
-                float br = (float)(-120 * Math.Min(1, t / 0.35));   // counter-clockwise on the way out
-                float lid = (float)(LidRest * (1 - Art.EaseInOut(Math.Min(1, t / 0.55))));
+                double shut = Art.EaseInOut(Math.Min(1, t / 0.55));                     // 0 = resting, 1 = closed
+                float lid = (float)(LidRest * (1 - shut));
+                float bs = (float)(1 - shut);
+                float br = Gear * LidRest * (float)shut;                                // turns with the lid as it closes
                 float scale = t < 0.55 ? (float)(1 + 0.05 * Math.Sin(Math.PI * t / 0.55)) : (float)(1 - Art.EaseInOut((t - 0.55) / 0.45));
                 frames.Add(Render(px, fg, accent, scale, lid, awake, bs, br, 0));
             }
