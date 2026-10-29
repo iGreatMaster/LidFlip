@@ -56,6 +56,13 @@ namespace LidFlip
                 g.DrawImage(b, x, y, px, px);
         }
 
+        /// <summary>The tray glyph as it appears on a taskbar of this theme.</summary>
+        static void DrawGlyphAt(Graphics g, float x, float y, float px, bool awake, Theme t)
+        {
+            using (Bitmap b = TrayGlyph.Still(Math.Max(8, (int)px), awake, t.BarText, t.Accent))
+                g.DrawImage(b, x, y, px, px);
+        }
+
         static void Caption(Graphics g, string text, RectangleF r, Color c, float pt, FontStyle st)
         {
             using (Font f = F(pt, st))
@@ -128,7 +135,7 @@ namespace LidFlip
             if (iconState >= 0)
             {
                 float ip = 22 * s;
-                DrawTileAt(g, x - ip, cy - ip / 2, ip, iconState == 1);
+                DrawGlyphAt(g, x - ip, cy - ip / 2, ip, iconState == 1, t);
                 x -= ip + 14 * s;
             }
             // chevron ^
@@ -213,7 +220,7 @@ namespace LidFlip
                 using (SolidBrush fb = new SolidBrush(t.MenuBg)) g.FillPath(fb, fp);
                 using (Pen pen = new Pen(t.Border, 1)) g.DrawPath(pen, fp);
             }
-            DrawTileAt(g, fly.X + (fly.Width - 26 * s) / 2, fly.Y + (fly.Height - 26 * s) / 2, 26 * s, false);
+            DrawGlyphAt(g, fly.X + (fly.Width - 24 * s) / 2, fly.Y + (fly.Height - 24 * s) / 2, 24 * s, false, t);
 
             // right: pinned on the taskbar
             Taskbar(g, right, t, s, 0, false);

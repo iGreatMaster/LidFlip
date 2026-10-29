@@ -11,8 +11,9 @@ namespace LidFlip
     class TrayApp : ApplicationContext
     {
         readonly NotifyIcon tray = new NotifyIcon();
-        readonly Icon iconAwake, iconSleep;
-        readonly Icon[] toAwake, toSleep;
+        Icon iconAwake, iconSleep;
+        Icon[] toAwake, toSleep;
+        Color glyphFg, glyphAccent;
         readonly Timer animTimer = new Timer(), pinTimer = new Timer(), quitTimer = new Timer();
         Icon[] anim; int animIdx; int pinTries;
         MethodInvoker animDone;     // runs when the current animation finishes
@@ -34,10 +35,10 @@ namespace LidFlip
 
             int px = Math.Max(16, SystemInformation.SmallIconSize.Width);   // 16/20/24/32 depending on display scaling
             iconPx = px;
-            iconAwake = ToIcon(Art.Still(px, true));
-            iconSleep = ToIcon(Art.Still(px, false));
-            toAwake = ToIcons(Art.Transition(px, true));
-            toSleep = ToIcons(Art.Transition(px, false));
+            BuildIcons();
+
+            // follow the taskbar when the user switches light/dark mode or changes the accent colour
+            Microsoft.Win32.SystemEvents.UserPreferenceChanged += OnPrefsChanged;
 
             // ----- menu: our own custom-drawn popup (see TrayMenu.cs) -----
             tray.MouseClick += delegate(object sender, MouseEventArgs e)
@@ -56,7 +57,7 @@ namespace LidFlip
             };
 
             // start-up animation: pop into the tray
-            Icon[] intro = ToIcons(Art.Intro(px, awakeState));
+            Icon[] intro = ToIcons(TrayGlyph.Intro(px, awakeState, glyphFg, glyphAccent));
             Refresh(false);
             tray.Icon = intro[0];
             tray.Visible = true;
@@ -101,6 +102,36 @@ namespace LidFlip
         }
 
         static Icon ToIcon(Bitmap b) { return Icon.FromHandle(b.GetHicon()); }
+
+        /// <summary>(Re)draws the tray icons in the current taskbar colours.</summary>
+        void BuildIcons()
+        {
+            TrayGlyph.Colors(out glyphFg, out glyphAccent);
+            iconAwake = ToIcon(TrayGlyph.Still(iconPx, true, glyphFg, glyphAccent));
+            iconSleep = ToIcon(TrayGlyph.Still(iconPx, false, glyphFg, glyphAccent));
+            toAwake = ToIcons(TrayGlyph.Transition(iconPx, true, glyphFg, glyphAccent));
+            toSleep = ToIcons(TrayGlyph.Transition(iconPx, false, glyphFg, glyphAccent));
+        }
+
+        void OnPrefsChanged(object sender, Microsoft.Win32.UserPreferenceChangedEventArgs e)
+        {
+            if (e.Category != Microsoft.Win32.UserPreferenceCategory.General &&
+                e.Category != Microsoft.Win32.UserPreferenceCategory.Color &&
+                e.Category != Microsoft.Win32.UserPreferenceCategory.VisualStyle) return;
+            try
+            {
+                ui.BeginInvoke((MethodInvoker)delegate
+                {
+                    if (quitting) return;
+                    Color fg, acc;
+                    TrayGlyph.Colors(out fg, out acc);
+                    if (fg == glyphFg && acc == glyphAccent) return;
+                    BuildIcons();
+                    if (!animTimer.Enabled) Refresh(false);
+                });
+            }
+            catch { }
+        }
 
         static Icon[] ToIcons(List<Bitmap> frames)
         {
@@ -254,7 +285,8 @@ namespace LidFlip
             if (guide != null && !guide.IsDisposed) guide.Close();
             if (menu != null && !menu.IsDisposed) menu.BeginClose();
             Icon[] outro;
-            try { outro = ToIcons(Art.Outro(iconPx, awakeState)); }
+            Microsoft.Win32.SystemEvents.UserPreferenceChanged -= OnPrefsChanged;
+            try { outro = ToIcons(TrayGlyph.Outro(iconPx, awakeState, glyphFg, glyphAccent)); }
             catch { outro = new Icon[0]; }
             Play(outro, delegate
             {

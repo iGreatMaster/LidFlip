@@ -22,6 +22,10 @@ You can — but the option is buried several screens deep, it has to be changed 
 
 LidFlip follows your Windows settings: light or dark mode, your **accent colour**, and the Windows 11 fonts and icons (Segoe UI Variable and Segoe Fluent Icons). On Windows 10 it falls back to the Windows 10 equivalents.
 
+The tray icon is a one-colour glyph like the other icons next to the clock: it turns white or black with the taskbar, and the ⚡ takes your accent colour.
+
+<p align="center"><img src="assets/tray.gif" width="420" alt="The LidFlip tray icon flipping on light and dark taskbars"></p>
+
 <p align="center"><img src="assets/guide/menu-light.png" width="300" alt="LidFlip menu, light"> <img src="assets/guide/menu-dark.png" width="300" alt="LidFlip menu, dark"></p>
 
 ## How it works
