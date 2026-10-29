@@ -136,8 +136,8 @@ namespace LidFlip
             return Render(px, fg, accent, 1, LidRest, awake, 1, 0, 0);
         }
 
-        // The badge is geared to the lid: every degree the lid moves turns the badge this many degrees
-        // the same way (GDI+ angles grow clockwise, the lid's angle grows counter-clockwise).
+        // The badge meshes with the lid like a gear: every degree the lid moves turns the badge this many
+        // degrees the opposite way (lid up = badge clockwise, lid down = badge counter-clockwise).
         const float Gear = 3.5f;
         const float Swing = 40f;     // how far the lid opens above its resting angle during a flip
 
@@ -157,7 +157,7 @@ namespace LidFlip
                 bool rising = t < 0.4;                                  // the lid peaks at t = 0.4
                 bool badgeAwake = rising ? !toAwake : toAwake;
                 float bs = (float)Math.Max(0, 1 - lift);                // fully gone at the top, back as the lid lands
-                float br = -Gear * Swing * (float)lift;                 // turns with the lid, both ways
+                float br = Gear * Swing * (float)lift;                  // meshes with the lid like a gear: lid up = badge clockwise
                 float ring = t > 0.6 ? (float)((t - 0.6) / 0.4) : 0;
                 frames.Add(Render(px, fg, accent, 1, lid, badgeAwake, bs, br, ring));
             }
@@ -178,7 +178,7 @@ namespace LidFlip
                 float lid = (float)(LidRest * open + Swing * lift);
                 bool down = t > 0.45;                                                    // past the top
                 float bs = down ? (float)Math.Max(0, 1 - lift) : 0;
-                float br = -Gear * Swing * (float)lift;
+                float br = Gear * Swing * (float)lift;
                 float ring = t > 0.65 ? (float)((t - 0.65) / 0.35) : 0;
                 frames.Add(Render(px, fg, accent, scale, lid, awake, bs, br, ring));
             }
@@ -196,7 +196,7 @@ namespace LidFlip
                 double shut = Art.EaseInOut(Math.Min(1, t / 0.55));                     // 0 = resting, 1 = closed
                 float lid = (float)(LidRest * (1 - shut));
                 float bs = (float)(1 - shut);
-                float br = Gear * LidRest * (float)shut;                                // turns with the lid as it closes
+                float br = -Gear * LidRest * (float)shut;                               // lid closing = badge counter-clockwise
                 float scale = t < 0.55 ? (float)(1 + 0.05 * Math.Sin(Math.PI * t / 0.55)) : (float)(1 - Art.EaseInOut((t - 0.55) / 0.45));
                 frames.Add(Render(px, fg, accent, scale, lid, awake, bs, br, 0));
             }

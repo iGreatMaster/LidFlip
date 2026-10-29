@@ -259,7 +259,7 @@ namespace LidFlip
                 float lid = (float)(LidRest + 46 * lift);
                 bool badgeAwake = t < 0.4 ? !toAwake : toAwake;          // swap at the top of the swing
                 float bs = (float)Math.Max(0, 1 - lift);
-                float br = -3.2f * 46 * (float)lift;                     // geared to the lid, both ways
+                float br = 3.2f * 46 * (float)lift;                      // meshes with the lid like a gear
                 float ripple = t > 0.7 ? (float)((t - 0.7) / 0.3) : 0;
                 frames.Add(Tile(px, Mix(fT, tT, c), Mix(fB, tB, c), tileScale, lid, badgeAwake, bs, br, ripple));
             }
