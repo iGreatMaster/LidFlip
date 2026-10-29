@@ -141,7 +141,7 @@ namespace LidFlip
         {
             const int N = 22;
             List<Bitmap> frames = new List<Bitmap>();
-            const int dir = 1;   // always spin the way the lid swings open (counter-clockwise), whichever way we flip
+            const int dir = -1;  // always spin clockwise, whichever way we flip
             for (int i = 1; i <= N; i++)
             {
                 double t = (double)i / N;
@@ -176,7 +176,7 @@ namespace LidFlip
                 float scale = (float)Math.Max(0, Math.Min(1.06, Art.EaseBack(Math.Min(1, t / 0.5))));
                 float lid = (float)(LidRest * Art.EaseOut(Math.Min(1, t / 0.3)) + 40 * Math.Sin(Math.PI * Math.Min(1, t / 0.85)));
                 double bp = t < 0.4 ? 0 : (t - 0.4) / 0.6;
-                float bs = (float)Pop(bp), br = (float)(120 * (1 - bp));      // counter-clockwise, with the lid opening
+                float bs = (float)Pop(bp), br = (float)(-120 * (1 - bp));     // clockwise, like the flips
                 float ring = t > 0.6 ? (float)((t - 0.6) / 0.4) : 0;
                 frames.Add(Render(px, fg, accent, scale, lid, awake, bs, br, ring));
             }
@@ -192,7 +192,7 @@ namespace LidFlip
             {
                 double t = (double)i / N;
                 float bs = (float)(1 - Art.EaseInOut(Math.Min(1, t / 0.35)));
-                float br = (float)(120 * Math.Min(1, t / 0.35));
+                float br = (float)(-120 * Math.Min(1, t / 0.35));   // counter-clockwise on the way out
                 float lid = (float)(LidRest * (1 - Art.EaseInOut(Math.Min(1, t / 0.55))));
                 float scale = t < 0.55 ? (float)(1 + 0.05 * Math.Sin(Math.PI * t / 0.55)) : (float)(1 - Art.EaseInOut((t - 0.55) / 0.45));
                 frames.Add(Render(px, fg, accent, scale, lid, awake, bs, br, 0));
